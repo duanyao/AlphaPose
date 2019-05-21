@@ -273,14 +273,19 @@ class DetectionLoader:
     def __init__(self, dataloder, batchSize=1, queueSize=1024):
         # initialize the file video stream along with the boolean
         # used to indicate if the thread should be stopped or not
-        self.det_model = Darknet("yolo/cfg/yolov3-spp.cfg")
-        self.det_model.load_weights('models/yolo/yolov3-spp.weights')
+        # self.det_model = Darknet("yolo/cfg/yolov3-spp.cfg")
+        # self.det_model.load_weights('models/yolo/yolov3-spp.weights')
+        self.det_model = Darknet("yolo/cfg/yolov3.cfg")
+        self.det_model.load_weights('models/yolo/yolov3.weights')
         self.det_model.net_info['height'] = opt.inp_dim
         self.det_inp_dim = int(self.det_model.net_info['height'])
         assert self.det_inp_dim % 32 == 0
         assert self.det_inp_dim > 32
-        self.det_model.cuda()
+        print('>>>> before det_model.cpu()')
+        self.det_model.cpu()
+        print('>>>> before det_model.eval()')
         self.det_model.eval()
+        print('>>>> after det_model.eval()')
 
         self.stopped = False
         self.dataloder = dataloder
@@ -319,8 +324,8 @@ class DetectionLoader:
 
             with torch.no_grad():
                 # Human Detection
-                img = img.cuda()
-                prediction = self.det_model(img, CUDA=True)
+                img = img.cpu()
+                prediction = self.det_model(img, CUDA=False)
                 # NMS process
                 dets = dynamic_write_results(prediction, opt.confidence,
                                     opt.num_classes, nms=True, nms_conf=opt.nms_thesh)
@@ -435,7 +440,7 @@ class VideoDetectionLoader:
         self.det_inp_dim = int(self.det_model.net_info['height'])
         assert self.det_inp_dim % 32 == 0
         assert self.det_inp_dim > 32
-        self.det_model.cuda()
+        self.det_model.cpu()
         self.det_model.eval()
 
         self.stream = cv2.VideoCapture(path)
@@ -493,11 +498,11 @@ class VideoDetectionLoader:
                 ht = inp[0].size(1)
                 wd = inp[0].size(2)
                 # Human Detection
-                img = Variable(torch.cat(img)).cuda()
+                img = Variable(torch.cat(img)).cpu()
                 im_dim_list = torch.FloatTensor(im_dim_list).repeat(1,2)
-                im_dim_list = im_dim_list.cuda()
+                im_dim_list = im_dim_list.cpu()
 
-                prediction = self.det_model(img, CUDA=True)
+                prediction = self.det_model(img, CUDA=False)
                 # NMS process
                 dets = dynamic_write_results(prediction, opt.confidence,
                                     opt.num_classes, nms=True, nms_conf=opt.nms_thesh)

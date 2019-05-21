@@ -333,7 +333,7 @@ def flip(x):
 
         x = torch.from_numpy(x.copy())
         if is_cuda:
-            x = x.cuda()
+            x = x.cpu()
         return x
 
 
