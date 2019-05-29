@@ -7,14 +7,9 @@ from torch.autograd import Variable
 import numpy as np
 import cv2 
 import matplotlib.pyplot as plt
-try:
-    from util import count_parameters as count
-    from util import convert2cpu as cpu
-    from util import predict_transform
-except ImportError:
-    from yolo.util import count_parameters as count
-    from yolo.util import convert2cpu as cpu
-    from yolo.util import predict_transform
+from .util import count_parameters as count
+from .util import convert2cpu as cpu
+from .util import predict_transform
 
 class test_net(nn.Module):
     def __init__(self, num_layers, input_size):
@@ -78,16 +73,12 @@ class MaxPoolStride1(nn.Module):
         super(MaxPoolStride1, self).__init__()
         self.kernel_size = kernel_size
         self.pad = kernel_size - 1
-
+    
     def forward(self, x):
-        padding = int(self.pad / 2)
-        #padded_x = F.pad(x, (0,self.pad,0,self.pad), mode="replicate")
-        #pooled_x = nn.MaxPool2d(self.kernel_size, self.pad)(padded_x)
-        #padded_x = F.pad(x, (0, self.pad, 0, self.pad), mode="replicate")
-        padded_x = F.pad(x, (padding, padding, padding, padding), mode="constant", value=0)
-        pooled_x = nn.MaxPool2d(self.kernel_size, 1)(padded_x)
+        padded_x = F.pad(x, (0,self.pad,0,self.pad), mode="replicate")
+        pooled_x = nn.MaxPool2d(self.kernel_size, self.pad)(padded_x)
         return pooled_x
-
+    
 
 class EmptyLayer(nn.Module):
     def __init__(self):
@@ -188,7 +179,7 @@ def create_modules(blocks):
                 pad = 0
                 
             #Add the convolutional layer
-            conv = nn.Conv2d(prev_filters, filters, kernel_size, stride, pad, bias=bias)
+            conv = nn.Conv2d(prev_filters, filters, kernel_size, stride, pad, bias = bias)
             module.add_module("conv_{0}".format(index), conv)
             
             #Add the Batch Norm Layer
@@ -219,38 +210,34 @@ def create_modules(blocks):
             
             #Start  of a route
             start = int(x["layers"][0])
-            if len(x["layers"]) <= 2:
-                #end, if there exists one.
-                try:
-                    end = int(x["layers"][1])
-                except:
-                    end = 0
+            
+            #end, if there exists one.
+            try:
+                end = int(x["layers"][1])
+            except:
+                end = 0
+                
+            
+            
+            #Positive anotation
+            if start > 0: 
+                start = start - index
+            
+            if end > 0:
+                end = end - index
 
-                #Positive anotation
-                if start > 0: 
-                    start = start - index
-                
-                if end > 0:
-                    end = end - index
-
-                
-                route = EmptyLayer()
-                module.add_module("route_{0}".format(index), route)
-                
-                
-                
-                if end < 0:
-                    filters = output_filters[index + start] + output_filters[index + end]
-                else:
-                    filters= output_filters[index + start]
-            else:  #SPP-route
-                assert len(x["layers"]) == 4
-
-                round = EmptyLayer()
-                module.add_module("route_{0}".format(index), route)
-
-                filters = output_filters[index + start] + output_filters[index + int(x["layers"][1])] \
-                          + output_filters[index + int(x["layers"][2])] + output_filters[index + int(x["layers"][3])]
+            
+            route = EmptyLayer()
+            module.add_module("route_{0}".format(index), route)
+            
+            
+            
+            if end < 0:
+                filters = output_filters[index + start] + output_filters[index + end]
+            else:
+                filters= output_filters[index + start]
+                        
+            
         
         #shortcut corresponds to skip connection
         elif x["type"] == "shortcut":
@@ -266,8 +253,7 @@ def create_modules(blocks):
                 maxpool = nn.MaxPool2d(size, stride)
             else:
                 maxpool = MaxPoolStride1(size)
-                #maxpool = nn.MaxPool2d(size, stride=1, padding=size-1)
-
+            
             module.add_module("maxpool_{}".format(index), maxpool)
         
         #Yolo is the detection layer
@@ -289,6 +275,7 @@ def create_modules(blocks):
         else:
             print("Something I dunno")
             assert False
+
 
         module_list.append(module)
         prev_filters = filters
@@ -343,21 +330,15 @@ class Darknet(nn.Module):
                 if len(layers) == 1:
                     x = outputs[i + (layers[0])]
 
-                elif len(layers) == 2:
+                else:
                     if (layers[1]) > 0:
                         layers[1] = layers[1] - i
                         
                     map1 = outputs[i + layers[0]]
                     map2 = outputs[i + layers[1]]
-
+                    
+                    
                     x = torch.cat((map1, map2), 1)
-                elif len(layers) == 4:  # SPP
-                    map1 = outputs[i + layers[0]]
-                    map2 = outputs[i + layers[1]]
-                    map3 = outputs[i + layers[2]]
-                    map4 = outputs[i + layers[3]]
-
-                    x = torch.cat((map1, map2, map3, map4), 1)
                 outputs[i] = x
             
             elif  module_type == "shortcut":
