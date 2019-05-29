@@ -84,6 +84,7 @@ class ImageLoader:
     def __init__(self, im_names, batchSize=1, format='yolo', queueSize=50):
         self.img_dir = opt.inputpath
         self.imglist = im_names
+        print('ImageLoader:__init__:im_names=' + ','.join(str(s) for s in im_names) + ', img_dir=' + self.img_dir)
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
@@ -135,8 +136,10 @@ class ImageLoader:
             im = im.resize((ow, oh))
             im = self.transform(im)
             while self.Q.full():
+                print('ImageLoader:getitem_ssd:sleep')
                 time.sleep(2)
             self.Q.put((im, inp, im_name))
+            print('ImageLoader:getitem_ssd:put:' + im_name)
 
     def getitem_yolo(self):
         for i in range(self.num_batches):
@@ -163,9 +166,11 @@ class ImageLoader:
 
 
             while self.Q.full():
+                print('ImageLoader:getitem_yolo:sleep')
                 time.sleep(2)
             
             self.Q.put((img, orig_img, im_name, im_dim_list))
+            print('ImageLoader:getitem_yolo:put:im_name=' + ','.join(im_name))
 
     def getitem(self):
         return self.Q.get()
@@ -273,8 +278,12 @@ class DetectionLoader:
     def __init__(self, dataloder, batchSize=1, queueSize=1024):
         # initialize the file video stream along with the boolean
         # used to indicate if the thread should be stopped or not
-        self.det_model = Darknet("yolo/cfg/yolov3-spp.cfg")
-        self.det_model.load_weights('models/yolo/yolov3-spp.weights')
+        # self.det_model = Darknet("yolo/cfg/yolov3-spp.cfg")
+        # self.det_model.load_weights('models/yolo/yolov3-spp.weights')
+        # self.det_model = Darknet("yolo/cfg/yolov3.cfg")
+        # self.det_model.load_weights('models/yolo/yolov3.weights')
+        self.det_model = Darknet("yolo/cfg/yolov3-tiny.cfg")
+        self.det_model.load_weights('models/yolo/yolov3-tiny.weights')
         self.det_model.net_info['height'] = opt.inp_dim
         self.det_inp_dim = int(self.det_model.net_info['height'])
         assert self.det_inp_dim % 32 == 0
@@ -429,8 +438,10 @@ class VideoDetectionLoader:
     def __init__(self, path, batchSize=4, queueSize=256):
         # initialize the file video stream along with the boolean
         # used to indicate if the thread should be stopped or not
-        self.det_model = Darknet("yolo/cfg/yolov3-spp.cfg")
-        self.det_model.load_weights('models/yolo/yolov3-spp.weights')
+        # self.det_model = Darknet("yolo/cfg/yolov3-spp.cfg")
+        # self.det_model.load_weights('models/yolo/yolov3-spp.weights')
+        self.det_model = Darknet("yolo/cfg/yolov3-tiny.cfg")
+        self.det_model.load_weights('models/yolo/yolov3-tiny.weights')
         self.det_model.net_info['height'] = opt.inp_dim
         self.det_inp_dim = int(self.det_model.net_info['height'])
         assert self.det_inp_dim % 32 == 0
