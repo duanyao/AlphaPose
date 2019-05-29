@@ -36,19 +36,21 @@ if __name__ == "__main__":
     if len(inputlist):
         im_names = open(inputlist, 'r').readlines()
     elif len(inputpath) and inputpath != '/':
+        print('demo.py:inputpath='+inputpath)
         for root, dirs, files in os.walk(inputpath):
             im_names = files
+            print('demo.py:im_names=' + ','.join(im_names))
     else:
         raise IOError('Error: must contain either --indir/--list')
 
     # Load input images
-    data_loader = ImageLoader(im_names, batchSize=args.detbatch, format='yolo').start()
+    data_loader = ImageLoader(im_names, batchSize=args.detbatch, format='yolo', queueSize=1).start()
 
     # Load detection loader
     print('Loading YOLO model..')
     sys.stdout.flush()
-    det_loader = DetectionLoader(data_loader, batchSize=args.detbatch).start()
-    det_processor = DetectionProcessor(det_loader).start()
+    det_loader = DetectionLoader(data_loader, batchSize=args.detbatch, queueSize=1).start()
+    det_processor = DetectionProcessor(det_loader, queueSize=1).start()
     
     # Load pose model
     pose_dataset = Mscoco()

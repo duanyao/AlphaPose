@@ -40,14 +40,14 @@ if __name__ == "__main__":
         os.mkdir(args.outputpath)
 
     # Load input video
-    data_loader = WebcamLoader(webcam).start()
+    data_loader = WebcamLoader(webcam, batchSize=1, queueSize=5).start()
     (fourcc,fps,frameSize) = data_loader.videoinfo()
 
     # Load detection loader
     print('Loading YOLO model..')
     sys.stdout.flush()
-    det_loader = DetectionLoader(data_loader, batchSize=args.detbatch).start()
-    det_processor = DetectionProcessor(det_loader).start()
+    det_loader = DetectionLoader(data_loader, batchSize=args.detbatch, queueSize=5).start()
+    det_processor = DetectionProcessor(det_loader, queueSize=5).start()
     
     # Load pose model
     pose_dataset = Mscoco()
@@ -59,8 +59,10 @@ if __name__ == "__main__":
     pose_model.eval()
 
     # Data writer
-    save_path = os.path.join(args.outputpath, 'AlphaPose_webcam'+webcam+'.avi')
-    writer = DataWriter(args.save_video, save_path, cv2.VideoWriter_fourcc(*'XVID'), fps, frameSize).start()
+    # save_path = os.path.join(args.outputpath, 'AlphaPose_webcam'+webcam+'.avi')
+    # writer = DataWriter(args.save_video, save_path, cv2.VideoWriter_fourcc(*'XVID'), fps, frameSize).start()
+    save_path = os.path.join(args.outputpath, 'AlphaPose_webcam'+webcam+'.mp4')
+    writer = DataWriter(args.save_video, save_path, cv2.VideoWriter_fourcc(*'mp4v'), 2, frameSize).start()
 
     runtime_profile = {
         'dt': [],
